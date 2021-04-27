@@ -124,5 +124,19 @@ make -j4
 编译完成后在onnx-tensorrt/build/文件夹中会生成libnvonnxparser.so等链接库以及可执行文件onnx2trt，**将这些链接库复制到TensorRT-7.0.0.11_cuda10.2/lib中**。
 
 
+## 模型转换
+待续
+
+## 模型推理
+待续
+
+## 参考
+[1] FairMOT: https://github.com/ifzhang/FairMOT
+
+[2] TensorRT-CenterNet: https://github.com/CaoWGG/TensorRT-CenterNet
+
+[3] TensorRT7-DCNv2-Plugin: https://github.com/lesliejackson/TensorRT7-DCNv2-Plugin
+
+
 
 
