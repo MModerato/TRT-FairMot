@@ -125,7 +125,18 @@ make -j4
 
 
 ## 模型转换
-待续
+到这一步，DCNv2层就已经注册到了TensorRT中，然后就可以使用官方提供的trtexec（位于文件夹TensorRT-7.0.0.11_cuda10.2/bin）来进行模型转换，具体使用方式通过`trtexec -h`了解。
+eg:
+```
+./trtexec --onnx=./fairmot_dla34.onnx  \
+          --int8   \
+          --calib=./calib.txt   \ 
+          --explicitBatch=1    \
+          --workspace=512   \
+          --verbose=True   \
+          --saveEngine=./fairmot_dla34.engine
+```
+转换为int8量化模型的时候需要提供calib.txt，calib.txt中每一行是用来进行量化计算的图像路径，这些图像要经过resize（尺寸与网络输入相符）。
 
 ## 模型推理
 待续
