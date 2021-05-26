@@ -193,6 +193,9 @@ trt.init_libnvinfer_plugins(TRT_LOGGER, '')
         return output
 ```
 
+## 速度对比
+待续
+
 ## 参考
 [1] FairMOT: https://github.com/ifzhang/FairMOT
 
