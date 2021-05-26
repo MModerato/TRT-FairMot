@@ -139,7 +139,59 @@ eg:
 转换为int8量化模型的时候需要提供calib.txt，calib.txt中每一行是用来进行量化计算的图像路径，这些图像要经过resize（尺寸与网络输入相符）。
 
 ## 模型推理
-待续
+### 创建输入/输出变量
+考虑到FairMOT模型forward之后还有不少后处理是基于pytorch进行的计算，如果按照官方提供的allocate_buffers函数进行TensorRT变量创建，那么会产生许多GPU-CPU之间的数据切换增加耗时，因此这里利用pytorch接管了TensorRT变量创建：
+```
+    def allocate_buffers_v2(self):
+        inputs = []
+        outputs = []
+        bindings = []
+        with torch.no_grad():
+            for binding in self.engine:
+                # shape = (self.engine.max_batch_size, ) + tuple(self.engine.get_binding_shape(binding))
+                shape = tuple(self.engine.get_binding_shape(binding))
+                dtype = torch.float32
+                device = torch.device('cuda')
+                temp_tensor = torch.empty(size=shape, dtype=dtype, device=device)
+
+                # Append the device buffer to device bindings.
+                bindings.append(int(temp_tensor.data_ptr()))
+                # Append to the appropriate list.
+                if self.engine.binding_is_input(binding):
+                    inputs.append(temp_tensor)
+                else:
+                    outputs.append(temp_tensor)
+        return inputs, outputs, bindings
+```
+### 加载插件
+虽然已经向TensorRT注册了DCNv2，但是在加载模型之前，仍然需要在代码中显式地进行加载：
+```
+trt.init_libnvinfer_plugins(TRT_LOGGER, '')
+```
+### 推理部分
+因为利用pytorch接管了TensorRT变量创建，所以在推理部分也相应地修改了代码：
+```
+    def do_inference_v2(self):
+        # Run inference.
+        self.context.execute_async(bindings=self.bindings, stream_handle=self.stream.handle)
+        # Synchronize the stream
+        self.stream.synchronize()
+        return self.outputs
+
+    def infer_v2(self, blob):
+        with torch.no_grad():
+            # Copy input image to host buffer
+            blob = torch.from_numpy(blob)
+            self.inputs[0].copy_(blob)
+
+        # Make self the active context, pushing it on top of the context stack.
+        self.cfx.push()
+        # Run inference
+        output = self.do_inference_v2()
+        # Remove any context from the top of the context stack, deactivating it.
+        self.cfx.pop()
+        return output
+```
 
 ## 参考
 [1] FairMOT: https://github.com/ifzhang/FairMOT
